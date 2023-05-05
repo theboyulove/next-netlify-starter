@@ -1,20 +1,22 @@
-const axios = require('axios');
+const fetch = require('node-fetch');
 const cheerio = require('cheerio');
 const prettier = require('prettier');
 
 exports.handler = async (event, context) => {
   const { id } = event.queryStringParameters;
-  const url = `https://aubtu.biz/{id}`;
-
+  const url = `https://aubtu.biz/${id}`;
+  
   try {
-    const response = await axios.get(url);
-    const html = response.data;
+    const response = await fetch(url);
+    console.log(`Response status: ${response.status}`);
+    console.log(`Response body: ${await response.text()}`);
+    
+    const html = await response.text();
     const $ = cheerio.load(html);
 
-    const title = $('h1.entry-title').text().trim();
-    const content = $('div.entry-content').html();
-    const image = $('div.entry-content img').attr('src');
-
+    const title = $('h1.post-title').text();
+    const content = $('div.post-content').html();
+    const image = $('div.post-image img').attr('src');
     const articleHTML = `
       <html>
         <head>
@@ -37,6 +39,7 @@ exports.handler = async (event, context) => {
       body: formattedHTML,
     };
   } catch (err) {
+    console.error(err);
     return { statusCode: 500, body: err.toString() };
   }
 };
