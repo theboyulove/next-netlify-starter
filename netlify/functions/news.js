@@ -1,19 +1,20 @@
-const fetch = require('node-fetch');
+const axios = require('axios');
 const cheerio = require('cheerio');
 const prettier = require('prettier');
 
 exports.handler = async (event, context) => {
   const { id } = event.queryStringParameters;
-  const url = `https://aubtu.biz/${id}`;
-  
+  const url = `https://aubtu.biz/{id}`;
+
   try {
-    const response = await fetch(url);
-    const html = await response.text();
+    const response = await axios.get(url);
+    const html = response.data;
     const $ = cheerio.load(html);
 
-    const title = $('h1.post-title').text();
-    const content = $('div.post-content').html();
-    const image = $('div.post-image img').attr('src');
+    const title = $('h1.entry-title').text().trim();
+    const content = $('div.entry-content').html();
+    const image = $('div.entry-content img').attr('src');
+
     const articleHTML = `
       <html>
         <head>
