@@ -26,7 +26,7 @@ async function getArticles(url) {
 (async () => {
   const articles = await getArticles("https://aubtu.biz/");
   const sitemap = articles.map((article) => {
-    return `https://hottestnews.netlify.app/post/${article.url}`;
+    return `https://hottestnews.netlify.app/${article.url}`;
   });
 
   fs.writeFileSync("public/sitemap.txt", sitemap.join("\n"), {
