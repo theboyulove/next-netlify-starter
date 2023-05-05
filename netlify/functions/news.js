@@ -1,5 +1,6 @@
 const fetch = require('node-fetch');
 const cheerio = require('cheerio');
+const prettier = require('prettier');
 
 exports.handler = async (event, context) => {
   // Fetch the article from the website
@@ -10,13 +11,26 @@ exports.handler = async (event, context) => {
   // Extract the article content
   const $ = cheerio.load(html);
   const articleContent = $('.article-content').html();
+  const articleImages = $('.article-content img')
+    .map((_, element) => $(element).attr('src'))
+    .get();
 
-  // Return the article content as the response
+  // Format the article content using Prettier
+  const formattedContent = prettier.format(articleContent, {
+    parser: 'html',
+    printWidth: 80,
+    htmlWhitespaceSensitivity: 'ignore',
+  });
+
+  // Return the article content and images as the response
   return {
     statusCode: 200,
     headers: {
       'Content-Type': 'text/html',
     },
-    body: articleContent,
+    body: JSON.stringify({
+      content: formattedContent,
+      images: articleImages,
+    }),
   };
 };
