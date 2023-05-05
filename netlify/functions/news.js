@@ -9,7 +9,21 @@ exports.handler = async (event, context) => {
 
   // Extract the article content
   const $ = cheerio.load(html);
-  const articleContent = $('.article-content').html();
+
+  // Get the title
+  const title = $('h1.entry-title').text();
+
+  // Get the content
+  let content = '';
+  $('div.entry-content p').each((i, el) => {
+    content += $(el).html();
+  });
+
+  // Get the images
+  const images = [];
+  $('div.entry-content img').each((i, el) => {
+    images.push($(el).attr('src'));
+  });
 
   // Return the article content as the response
   return {
@@ -17,6 +31,10 @@ exports.handler = async (event, context) => {
     headers: {
       'Content-Type': 'text/html',
     },
-    body: articleContent,
+    body: `
+      <h1>${title}</h1>
+      <div>${content}</div>
+      ${images.map(img => `<img src="${img}"/>`).join('')}
+    `,
   };
 };
