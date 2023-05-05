@@ -4,44 +4,47 @@ const prettier = require('prettier');
 
 exports.handler = async (event, context) => {
   const { id } = event.queryStringParameters;
-  const articleUrl = `https://criticsbreakingnews.co.uk/?p=${id}`;
+  const url = `https://criticsbreakingnews.co.uk/?p=${id}`;
 
-  const response = await fetch(articleUrl);
-  const html = await response.text();
+  try {
+    const response = await fetch(url);
+    const html = await response.text();
 
-  const $ = cheerio.load(html);
+    const $ = cheerio.load(html);
 
-  // Get the title of the article
-  const title = $('h1.post-title').text();
+    const title = $('h1.post-title').text();
+    const content = $('div.post-content').html();
+    const image = $('div.post-image img').attr('src');
 
-  // Get the main content of the article
-  const articleContent = $('div.post-content').html();
+    console.log("Title:", title);
+    console.log("Content:", content);
+    console.log("Image:", image);
 
-  // Get the featured image of the article
-  const featuredImageUrl = $('div.post-image img').first().attr('src');
-
-  // Format the HTML output using Prettier
-  const formattedHtml = prettier.format(
-    `
+    const articleHTML = `
       <html>
         <head>
           <title>${title}</title>
         </head>
         <body>
           <h1>${title}</h1>
-          <img src="${featuredImageUrl}">
-          ${articleContent}
+          <img src="${image}">
+          ${content}
         </body>
       </html>
-    `,
-    { parser: 'html' }
-  );
+    `;
 
-  return {
-    statusCode: 200,
-    headers: {
-      'Content-Type': 'text/html',
-    },
-    body: formattedHtml,
-  };
+    const formattedHTML = prettier.format(articleHTML, { parser: 'html' });
+
+    console.log("Formatted HTML:", formattedHTML);
+
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-type': 'text/html',
+      },
+      body: formattedHTML,
+    };
+  } catch (err) {
+    return { statusCode: 500, body: err.toString() };
+  }
 };
