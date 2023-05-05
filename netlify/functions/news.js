@@ -1,48 +1,49 @@
 const fetch = require('node-fetch');
-const cheerio = require('cheerio');
 const prettier = require('prettier');
+const { parse } = require('node-html-parser');
 
 exports.handler = async (event, context) => {
   const { id } = event.queryStringParameters;
-  const url = `https://criticsbreakingnews.co.uk/?p=${id}`;
+  const articleUrl = `https://criticsbreakingnews.co.uk/?p=${id}`;
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(articleUrl);
     const html = await response.text();
 
-    const $ = cheerio.load(html);
+    const root = parse(html);
 
-    const title = $('h1.post-title').text();
-    const content = $('div.post-content').html();
-    const image = $('div.post-image img').attr('src');
+    // Get the title of the article
+    const title = root.querySelector('h1.post-title').text;
 
-    console.log("Title:", title);
-    console.log("Content:", content);
-    console.log("Image:", image);
+    // Get the main content of the article
+    const articleContent = root.querySelector('div.post-content').innerHTML;
 
-    const articleHTML = `
-      <html>
-        <head>
-          <title>${title}</title>
-        </head>
-        <body>
-          <h1>${title}</h1>
-          <img src="${image}">
-          ${content}
-        </body>
-      </html>
-    `;
+    // Get the featured image of the article
+    const featuredImageUrl = root.querySelector('div.post-image img').getAttribute('src');
 
-    const formattedHTML = prettier.format(articleHTML, { parser: 'html' });
-
-    console.log("Formatted HTML:", formattedHTML);
+    // Format the HTML output using Prettier
+    const formattedHtml = prettier.format(
+      `
+        <html>
+          <head>
+            <title>${title}</title>
+          </head>
+          <body>
+            <h1>${title}</h1>
+            <img src="${featuredImageUrl}">
+            ${articleContent}
+          </body>
+        </html>
+      `,
+      { parser: 'html' }
+    );
 
     return {
       statusCode: 200,
       headers: {
-        'Content-type': 'text/html',
+        'Content-Type': 'text/html',
       },
-      body: formattedHTML,
+      body: formattedHtml,
     };
   } catch (err) {
     return { statusCode: 500, body: err.toString() };
