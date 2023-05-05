@@ -5,20 +5,15 @@ const prettier = require('prettier');
 exports.handler = async (event, context) => {
   const { id } = event.queryStringParameters;
   const url = `https://aubtu.biz/${id}`;
-  
+
   try {
     const response = await fetch(url);
     const html = await response.text();
-
-    // create a new response object to avoid using the same stream
-    const response2 = await fetch(url);
-    const html2 = await response2.text();
-
     const $ = cheerio.load(html);
 
-    const title = $('h1.post-title').text();
-    const content = $('div.post-content').html();
-    const image = $('div.post-image img').attr('src');
+    const title = $('h1.title').text();
+    const content = $('div.content').html();
+    const image = $('img').attr('src');
     const articleHTML = `
       <html>
         <head>
