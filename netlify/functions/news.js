@@ -4,7 +4,7 @@ const prettier = require('prettier');
 
 exports.handler = async (event, context) => {
   // Fetch the article from the website
-  const articleUrl = 'https://example.com/article';
+  const articleUrl = 'https://aubtu.biz/100680/';
   const response = await fetch(articleUrl);
   const html = await response.text();
 
