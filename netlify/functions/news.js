@@ -3,44 +3,45 @@ const cheerio = require('cheerio');
 const prettier = require('prettier');
 
 exports.handler = async (event, context) => {
-  try {
-    const articleUrl = 'https://aubtu.biz/100680/'; // Replace with your article URL
-    const response = await fetch(articleUrl);
-    const html = await response.text();
-    const $ = cheerio.load(html);
+  // Fetch the article from the website
+  const articleUrl = 'https://aubtu.biz/100680/';
+  const response = await fetch(articleUrl);
+  const html = await response.text();
 
-    // Extract the article content and images
-    const $content = $('.entry-content');
-    const articleContent = $content.html();
-    const images = $content.find('img').map((_, img) => $(img).attr('src')).get();
+  // Extract the article content
+  const $ = cheerio.load(html);
+  const articleTitle = $('h1.entry-title').text().trim();
+  const articleContent = $('div.entry-content').html();
+  const articleImages = $('div.entry-content img');
 
-    // Generate the HTML
-    const htmlContent = `
-      <html>
-        <head>
-          <title>Article</title>
-        </head>
-        <body>
-          ${articleContent}
-        </body>
-      </html>
-    `;
-    const formattedHtml = prettier.format(htmlContent, { parser: 'html' });
+  // Update image src to absolute URLs
+  articleImages.each((index, element) => {
+    const originalSrc = $(element).attr('src');
+    const absoluteSrc = new URL(originalSrc, articleUrl).toString();
+    $(element).attr('src', absoluteSrc);
+  });
 
-    // Return the article content and images as the response
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'text/html',
-      },
-      body: formattedHtml,
-      images: images,
-    };
-  } catch (error) {
-    console.log(error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ message: 'Internal Server Error' }),
-    };
-  }
+  // Format the HTML content using Prettier
+  const formattedHtml = prettier.format(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>${articleTitle}</title>
+      </head>
+      <body>
+        <h1>${articleTitle}</h1>
+        ${articleContent}
+      </body>
+    </html>
+  `, { parser: 'html' });
+
+  // Return the article content as the response
+  return {
+    statusCode: 200,
+    headers: {
+      'Content-Type': 'text/html',
+    },
+    body: formattedHtml,
+  };
 };
