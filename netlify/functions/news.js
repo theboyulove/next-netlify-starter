@@ -1,15 +1,15 @@
-const fetch = require('node-fetch');
-const cheerio = require('cheerio');
 const prettier = require('prettier');
 
 exports.handler = async (event, context) => {
   const articleId = event.queryStringParameters.id;
-  const articleUrl = `https://selectednews.live/?p=${articleId}`;
+  const articleUrl = `https://criticsbreakingnews.co.uk/?p=${articleId}`;
 
-  const response = await fetch(articleUrl);
+  const fetch = await import('node-fetch');
+  const response = await fetch.default(articleUrl);
   const html = await response.text();
 
-  const $ = cheerio.load(html);
+  const cheerio = await import('cheerio');
+  const $ = cheerio.default.load(html);
 
   // Get the title of the article
   const title = $('h1.entry-title').text();
