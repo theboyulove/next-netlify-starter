@@ -8,10 +8,12 @@ exports.handler = async (event, context) => {
   
   try {
     const response = await fetch(url);
-    console.log(`Response status: ${response.status}`);
-    console.log(`Response body: ${await response.text()}`);
-    
     const html = await response.text();
+
+    // create a new response object to avoid using the same stream
+    const response2 = await fetch(url);
+    const html2 = await response2.text();
+
     const $ = cheerio.load(html);
 
     const title = $('h1.post-title').text();
@@ -39,7 +41,6 @@ exports.handler = async (event, context) => {
       body: formattedHTML,
     };
   } catch (err) {
-    console.error(err);
     return { statusCode: 500, body: err.toString() };
   }
 };
