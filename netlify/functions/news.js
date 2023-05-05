@@ -1,56 +1,48 @@
-const fetch = require('node-fetch');
+const axios = require('axios');
 const cheerio = require('cheerio');
-const prettier = require('prettier');
 const fs = require('fs');
+const path = require('path');
+const FormData = require('form-data');
+const fetch = require('node-fetch');
 
 exports.handler = async (event, context) => {
-  const articleId = event.queryStringParameters.id;
-  const articleUrl = `https://criticsbreakingnews.co.uk/?p=${articleId}`;
+  const articleId = event.path.split('/').pop();
+  const url = `https://criticsbreakingnews.co.uk/?p=${articleId}`;
+  const response = await axios.get(url);
+  const $ = cheerio.load(response.data);
+  
+  const title = $('meta[property="og:title"]').attr('content') || '';
+  const imageUrl = $('meta[property="og:image"]').attr('content') || '';
+  const contentHtml = $('div[itemprop="articleBody"]').html() || '';
+  
+  const imgPath = path.join(__dirname, '/tmp', `${articleId}.jpg`);
+  await fetch(imageUrl)
+    .then(res => {
+      const dest = fs.createWriteStream(imgPath);
+      res.body.pipe(dest);
+    });
 
-  const response = await fetch(articleUrl);
-  const html = await response.text();
-
-  const $ = cheerio.load(html);
-
-  // Get the title of the article
-  const title = $('h1.entry-title').text();
-
-  // Get the main content of the article
-  const articleContent = $('div.entry-content').html();
-
-  // Get the featured image of the article
-  const featuredImageUrl = $('div.entry-content img').first().attr('src');
-
-  // Cache the image to the Netlify server
-  const imagePath = `/tmp/${articleId}.jpg`;
-  if (!fs.existsSync(imagePath)) {
-    const imageResponse = await fetch(featuredImageUrl);
-    const buffer = await imageResponse.buffer();
-    fs.writeFileSync(imagePath, buffer);
-  }
-
-  // Format the HTML output using Prettier
-  const formattedHtml = prettier.format(
-    `
-      <html>
-        <head>
-          <title>${title}</title>
-        </head>
-        <body>
-          <h1>${title}</h1>
-          <img src="${imagePath}">
-          ${articleContent}
-        </body>
-      </html>
-    `,
-    { parser: 'html' }
-  );
-
+  const formData = new FormData();
+  formData.append('title', title);
+  formData.append('contentHtml', contentHtml);
+  formData.append('imageUrl', `https://hottestnews.netlify.app/tmp/${articleId}.jpg`);
+  
+  const formattedHtml = `
+    <html>
+      <head>
+        <title>${title}</title>
+      </head>
+      <body>
+        <h1>${title}</h1>
+        <img src="${imageUrl}" />
+        ${contentHtml}
+      </body>
+    </html>
+  `;
+  
   return {
     statusCode: 200,
-    headers: {
-      'Content-Type': 'text/html',
-    },
-    body: formattedHtml,
+    headers: { 'Content-Type': 'text/html' },
+    body: formattedHtml
   };
 };
