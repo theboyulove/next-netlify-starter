@@ -1,48 +1,47 @@
-const axios = require('axios');
-const cheerio = require('cheerio');
-const fs = require('fs');
-const path = require('path');
-const FormData = require('form-data');
 const fetch = require('node-fetch');
+const cheerio = require('cheerio');
+const prettier = require('prettier');
 
 exports.handler = async (event, context) => {
-  const articleId = event.path.split('/').pop();
-  const url = `https://criticsbreakingnews.co.uk/?p=${articleId}`;
-  const response = await axios.get(url);
-  const $ = cheerio.load(response.data);
-  
-  const title = $('meta[property="og:title"]').attr('content') || '';
-  const imageUrl = $('meta[property="og:image"]').attr('content') || '';
-  const contentHtml = $('div[itemprop="articleBody"]').html() || '';
-  
-  const imgPath = path.join(__dirname, '/tmp', `${articleId}.jpg`);
-  await fetch(imageUrl)
-    .then(res => {
-      const dest = fs.createWriteStream(imgPath);
-      res.body.pipe(dest);
-    });
+  const articleId = event.queryStringParameters.id;
+  const articleUrl = `https://selectednews.live/?p=${articleId}`;
 
-  const formData = new FormData();
-  formData.append('title', title);
-  formData.append('contentHtml', contentHtml);
-  formData.append('imageUrl', `https://hottestnews.netlify.app/tmp/${articleId}.jpg`);
-  
-  const formattedHtml = `
-    <html>
-      <head>
-        <title>${title}</title>
-      </head>
-      <body>
-        <h1>${title}</h1>
-        <img src="${imageUrl}" />
-        ${contentHtml}
-      </body>
-    </html>
-  `;
-  
+  const response = await fetch(articleUrl);
+  const html = await response.text();
+
+  const $ = cheerio.load(html);
+
+  // Get the title of the article
+  const title = $('h1.entry-title').text();
+
+  // Get the main content of the article
+  const articleContent = $('div.entry-content').html();
+
+  // Get the featured image of the article
+  const featuredImageUrl = $('div.entry-content img').first().attr('src');
+
+  // Format the HTML output using Prettier
+  const formattedHtml = prettier.format(
+    `
+      <html>
+        <head>
+          <title>${title}</title>
+        </head>
+        <body>
+          <h1>${title}</h1>
+          <img src="${featuredImageUrl}">
+          <div>${articleContent}</div>
+        </body>
+      </html>
+    `,
+    { parser: 'html' }
+  );
+
   return {
     statusCode: 200,
-    headers: { 'Content-Type': 'text/html' },
-    body: formattedHtml
+    headers: {
+      'Content-Type': 'text/html',
+    },
+    body: formattedHtml,
   };
 };
