@@ -3,44 +3,39 @@ const cheerio = require('cheerio');
 const prettier = require('prettier');
 
 exports.handler = async (event, context) => {
-  const articleUrl = 'https://selectednews.live/former-nfl-participant-colin-allred-raises-file-2-million-in-first-day-of-senate-marketing-campaign-sd-news';
+  const { id } = event.queryStringParameters;
+  const url = `https://aubtu.biz/${id}`;
+  
+  try {
+    const response = await fetch(url);
+    const html = await response.text();
+    const $ = cheerio.load(html);
 
-  const response = await fetch(articleUrl);
-  const html = await response.text();
-
-  const $ = cheerio.load(html);
-
-  // Get the title of the article
-  const title = $('h1.entry-title').text();
-
-  // Get the main content of the article
-  const articleContent = $('div.entry-content').html();
-
-  // Get the featured image of the article
-  const featuredImageUrl = $('div.entry-content img').first().attr('src');
-
-  // Format the HTML output using Prettier
-  const formattedHtml = prettier.format(
-    `
+    const title = $('h1.post-title').text();
+    const content = $('div.post-content').html();
+    const image = $('div.post-image img').attr('src');
+    const articleHTML = `
       <html>
         <head>
           <title>${title}</title>
         </head>
         <body>
           <h1>${title}</h1>
-          <img src="${featuredImageUrl}">
-          ${articleContent}
+          <img src="${image}">
+          ${content}
         </body>
       </html>
-    `,
-    { parser: 'html' }
-  );
+    `;
 
-  return {
-    statusCode: 200,
-    headers: {
-      'Content-Type': 'text/html',
-    },
-    body: formattedHtml,
-  };
+    const formattedHTML = prettier.format(articleHTML, { parser: 'html' });
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-type': 'text/html',
+      },
+      body: formattedHTML,
+    };
+  } catch (err) {
+    return { statusCode: 500, body: err.toString() };
+  }
 };
