@@ -4,7 +4,7 @@ const prettier = require('prettier');
 
 exports.handler = async (event, context) => {
   const { id } = event.queryStringParameters;
-  const articleUrl = `https://aubtu.biz/${id}`;
+  const articleUrl = `https://criticsbreakingnews.co.uk/?p=${id}`;
 
   try {
     const response = await fetch(articleUrl);
