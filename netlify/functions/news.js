@@ -1,6 +1,7 @@
 const fetch = require('node-fetch');
 const cheerio = require('cheerio');
 const prettier = require('prettier');
+const fs = require('fs');
 
 exports.handler = async (event, context) => {
   const articleId = event.queryStringParameters.id;
@@ -20,6 +21,14 @@ exports.handler = async (event, context) => {
   // Get the featured image of the article
   const featuredImageUrl = $('div.entry-content img').first().attr('src');
 
+  // Cache the image to the Netlify server
+  const imagePath = `/tmp/${articleId}.jpg`;
+  if (!fs.existsSync(imagePath)) {
+    const imageResponse = await fetch(featuredImageUrl);
+    const buffer = await imageResponse.buffer();
+    fs.writeFileSync(imagePath, buffer);
+  }
+
   // Format the HTML output using Prettier
   const formattedHtml = prettier.format(
     `
@@ -29,8 +38,8 @@ exports.handler = async (event, context) => {
         </head>
         <body>
           <h1>${title}</h1>
-          <img src="${featuredImageUrl}">
-          <div>${articleContent}</div>
+          <img src="${imagePath}">
+          ${articleContent}
         </body>
       </html>
     `,
