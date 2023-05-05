@@ -4,31 +4,43 @@ const prettier = require('prettier');
 
 exports.handler = async (event, context) => {
   try {
-    // Fetch the article from the website
-    const articleUrl = 'https://aubtu.biz/100680/';
+    const articleUrl = 'https://aubtu.biz/100680/'; // Replace with your article URL
     const response = await fetch(articleUrl);
     const html = await response.text();
-
-    // Extract the article content
     const $ = cheerio.load(html);
-    const articleContent = $('.article-content').html();
 
-    // Format the article content with Prettier
-    const formattedContent = articleContent ? prettier.format(articleContent, { parser: 'html' }) : '';
+    // Extract the article content and images
+    const $content = $('.entry-content');
+    const articleContent = $content.html();
+    const images = $content.find('img').map((_, img) => $(img).attr('src')).get();
 
-    // Return the article content as the response
+    // Generate the HTML
+    const htmlContent = `
+      <html>
+        <head>
+          <title>Article</title>
+        </head>
+        <body>
+          ${articleContent}
+        </body>
+      </html>
+    `;
+    const formattedHtml = prettier.format(htmlContent, { parser: 'html' });
+
+    // Return the article content and images as the response
     return {
       statusCode: 200,
       headers: {
         'Content-Type': 'text/html',
       },
-      body: formattedContent,
+      body: formattedHtml,
+      images: images,
     };
   } catch (error) {
-    console.error(error);
+    console.log(error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Internal Server Error' }),
+      body: JSON.stringify({ message: 'Internal Server Error' }),
     };
   }
 };
