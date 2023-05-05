@@ -1,5 +1,6 @@
 const fetch = require('node-fetch');
 const cheerio = require('cheerio');
+const prettier = require('prettier');
 
 exports.handler = async (event, context) => {
   // Fetch the article from the website
@@ -9,9 +10,22 @@ exports.handler = async (event, context) => {
 
   // Extract the article content
   const $ = cheerio.load(html);
-  const articleTitle = $('h1.entry-title').text();
-  const articleContent = $('div.entry-content').html();
-  const articleImage = $('div.entry-content img').attr('data-src');
+  const articleTitle = $('.article-title').text();
+  const articleContent = $('.article-content').html();
+  const articleImage = $('.article-image img').attr('src');
+
+  // Format the HTML output with Prettier
+  const formattedHtml = prettier.format(`
+    <html>
+      <head>
+        <title>${articleTitle}</title>
+      </head>
+      <body>
+        <img src="${articleImage}">
+        <div>${articleContent}</div>
+      </body>
+    </html>
+  `, { parser: 'html' });
 
   // Return the article content as the response
   return {
@@ -19,17 +33,6 @@ exports.handler = async (event, context) => {
     headers: {
       'Content-Type': 'text/html',
     },
-    body: `
-      <html>
-        <head>
-          <title>${articleTitle}</title>
-        </head>
-        <body>
-          <h1>${articleTitle}</h1>
-          <img src="${articleImage}" loading="lazy" />
-          ${articleContent}
-        </body>
-      </html>
-    `,
+    body: formattedHtml,
   };
 };
