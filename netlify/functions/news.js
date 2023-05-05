@@ -3,48 +3,54 @@ const { parse } = require('node-html-parser');
 const prettier = require('prettier');
 
 exports.handler = async (event, context) => {
-  const { id } = event.queryStringParameters;
-  const url = `https://criticsbreakingnews.co.uk/?p=${id}`;
+  const articleId = event.path.split('/').pop();
+  const articleUrl = `https://criticsbreakingnews.co.uk/?p=${articleId}`;
 
-  try {
-    const response = await fetch(url);
-    const html = await response.text();
+  const response = await fetch(articleUrl);
+  const html = await response.text();
 
-    if (!html) {
-      throw new Error('Failed to fetch HTML content');
-    }
+  const root = parse(html);
 
-    const root = parse(html);
-    const title = root.querySelector('h1.post-title')?.text;
-    const content = root.querySelector('div.post-content')?.innerHTML;
-    const image = root.querySelector('div.post-image img')?.getAttribute('src');
+  // Get the title of the article
+  const titleElement = root.querySelector('.entry-title');
+  const title = titleElement ? titleElement.text.trim() : '';
 
-    const articleHTML = `
+  // Get the main content of the article
+  const articleContentElement = root.querySelector('.entry-content');
+  const articleContent = articleContentElement ? articleContentElement.innerHTML.trim() : '';
+
+  // Get the featured image of the article
+  const featuredImageElement = root.querySelector('.entry-content img');
+  const imgSrc = featuredImageElement ? featuredImageElement.getAttribute('src') : '';
+
+  console.log(`Title: ${title}`);
+  console.log(`Content: ${articleContent}`);
+  console.log(`Image: ${imgSrc}`);
+
+  // Format the HTML output using Prettier
+  const formattedHtml = prettier.format(
+    `
       <html>
         <head>
           <title>${title}</title>
         </head>
         <body>
           <h1>${title}</h1>
-          <img src="${image}">
-          ${content}
+          <img src="${imgSrc}" />
+          ${articleContent}
         </body>
       </html>
-    `;
+    `,
+    { parser: 'html' }
+  );
 
-    const formattedHTML = prettier.format(articleHTML, { parser: 'html' });
+  console.log(`Formatted HTML: ${formattedHtml}`);
 
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'text/html',
-      },
-      body: formattedHTML,
-    };
-  } catch (err) {
-    return {
-      statusCode: 500,
-      body: `Error: ${err.message}`,
-    };
-  }
+  return {
+    statusCode: 200,
+    headers: {
+      'Content-Type': 'text/html',
+    },
+    body: formattedHtml,
+  };
 };
