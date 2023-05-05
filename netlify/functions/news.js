@@ -1,51 +1,50 @@
 const fetch = require('node-fetch');
-const prettier = require('prettier');
 const { parse } = require('node-html-parser');
+const prettier = require('prettier');
 
 exports.handler = async (event, context) => {
   const { id } = event.queryStringParameters;
-  const articleUrl = `https://criticsbreakingnews.co.uk/?p=${id}`;
+  const url = `https://criticsbreakingnews.co.uk/?p=${id}`;
 
   try {
-    const response = await fetch(articleUrl);
+    const response = await fetch(url);
     const html = await response.text();
 
+    if (!html) {
+      throw new Error('Failed to fetch HTML content');
+    }
+
     const root = parse(html);
+    const title = root.querySelector('h1.post-title')?.text;
+    const content = root.querySelector('div.post-content')?.innerHTML;
+    const image = root.querySelector('div.post-image img')?.getAttribute('src');
 
-    // Get the title of the article
-    const title = root.querySelector('h1.post-title').text;
+    const articleHTML = `
+      <html>
+        <head>
+          <title>${title}</title>
+        </head>
+        <body>
+          <h1>${title}</h1>
+          <img src="${image}">
+          ${content}
+        </body>
+      </html>
+    `;
 
-    // Get the main content of the article
-    const articleContent = root.querySelector('div.post-content').innerHTML;
-
-    // Get the featured image of the article
-    const featuredImageUrl = root.querySelector('div.post-image img').getAttribute('src');
-
-    // Format the HTML output using Prettier
-    const formattedHtml = prettier.format(
-      `
-        <html>
-          <head>
-            <title>${title}</title>
-          </head>
-          <body>
-            <h1>${title}</h1>
-            <img src="${featuredImageUrl}">
-            ${articleContent}
-          </body>
-        </html>
-      `,
-      { parser: 'html' }
-    );
+    const formattedHTML = prettier.format(articleHTML, { parser: 'html' });
 
     return {
       statusCode: 200,
       headers: {
         'Content-Type': 'text/html',
       },
-      body: formattedHtml,
+      body: formattedHTML,
     };
   } catch (err) {
-    return { statusCode: 500, body: err.toString() };
+    return {
+      statusCode: 500,
+      body: `Error: ${err.message}`,
+    };
   }
 };
