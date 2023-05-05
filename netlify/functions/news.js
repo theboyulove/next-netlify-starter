@@ -1,5 +1,6 @@
 const fetch = require('node-fetch');
 const cheerio = require('cheerio');
+const prettier = require('prettier');
 
 exports.handler = async (event, context) => {
   // Fetch the article from the website
@@ -9,32 +10,27 @@ exports.handler = async (event, context) => {
 
   // Extract the article content
   const $ = cheerio.load(html);
+  const articleContent = $('.article-content').html();
+  const articleImages = $('.article-content img')
+    .map((_, element) => $(element).attr('src'))
+    .get();
 
-  // Get the title
-  const title = $('h1.entry-title').text();
-
-  // Get the content
-  let content = '';
-  $('div.entry-content p').each((i, el) => {
-    content += $(el).html();
+  // Format the article content using Prettier
+  const formattedContent = prettier.format(articleContent, {
+    parser: 'html',
+    printWidth: 80,
+    htmlWhitespaceSensitivity: 'ignore',
   });
 
-  // Get the images
-  const images = [];
-  $('div.entry-content img').each((i, el) => {
-    images.push($(el).attr('src'));
-  });
-
-  // Return the article content as the response
+  // Return the article content and images as the response
   return {
     statusCode: 200,
     headers: {
       'Content-Type': 'text/html',
     },
-    body: `
-      <h1>${title}</h1>
-      <div>${content}</div>
-      ${images.map(img => `<img src="${img}"/>`).join('')}
-    `,
+    body: JSON.stringify({
+      content: formattedContent,
+      images: articleImages,
+    }),
   };
 };
